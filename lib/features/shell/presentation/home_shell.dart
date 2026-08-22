@@ -129,17 +129,43 @@ class _GlassBottomNavigation extends StatelessWidget {
           minimum: EdgeInsets.zero,
           child: SizedBox(
             height: 58,
-            child: Row(
-              children: List.generate(destinations.length, (index) {
-                final item = destinations[index];
-                return Expanded(
-                  child: _DestinationButton(
-                    destination: item,
-                    selected: selectedIndex == index,
-                    onTap: () => onSelected(index),
-                  ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = constraints.maxWidth / destinations.length;
+                return Stack(
+                  children: [
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeOutBack,
+                      left: itemWidth * selectedIndex,
+                      width: itemWidth,
+                      top: 0,
+                      bottom: 0,
+                      child: LiquidGlass(
+                        dark: true,
+                        radius: 20,
+                        blur: 18,
+                        opacity: 0.88,
+                        shadowOpacity: 0.14,
+                        variant: GlassVariant.prominent,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(destinations.length, (index) {
+                        final item = destinations[index];
+                        return Expanded(
+                          child: _DestinationButton(
+                            destination: item,
+                            selected: selectedIndex == index,
+                            onTap: () => onSelected(index),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 );
-              }),
+              },
             ),
           ),
         ),
@@ -172,7 +198,7 @@ class _DestinationButton extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: selected ? AppColors.black : Colors.transparent,
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(

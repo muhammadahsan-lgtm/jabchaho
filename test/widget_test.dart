@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:jabchaho/core/widgets/liquid_glass.dart';
 import 'package:jabchaho/main.dart';
 
 void main() {
@@ -38,11 +41,18 @@ void main() {
 
   testWidgets('bottom navigation changes sections', (tester) async {
     await tester.pumpWidget(const JabChahoApp());
+    final initialPosition = tester
+        .widget<AnimatedPositioned>(find.byType(AnimatedPositioned))
+        .left;
     await tester.tap(find.text('Orders'));
     await tester.pumpAndSettle();
 
     expect(find.text('Your orders'), findsOneWidget);
     expect(find.byIcon(Icons.receipt_long_rounded), findsWidgets);
+    final selectedPosition = tester
+        .widget<AnimatedPositioned>(find.byType(AnimatedPositioned))
+        .left;
+    expect(selectedPosition, greaterThan(initialPosition!));
   });
 
   testWidgets('narrow phone layout stays usable without overflow', (
@@ -111,6 +121,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('collapsed-home-header')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('interactive glass supports pointer and accessibility modes', (
+    tester,
+  ) async {
+    await setViewport(tester, const Size(500, 500));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(500, 500),
+            highContrast: true,
+            disableAnimations: true,
+          ),
+          child: const Center(
+            child: LiquidGlass(
+              key: ValueKey('interactive-glass'),
+              interactive: true,
+              child: SizedBox(width: 160, height: 64),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final center = tester.getCenter(
+      find.byKey(const ValueKey('interactive-glass')),
+    );
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: center);
+    await mouse.moveTo(center + const Offset(20, 4));
+    await mouse.down(center + const Offset(20, 4));
+    await tester.pump();
+    await mouse.up();
+    await tester.pump();
+
     expect(tester.takeException(), isNull);
   });
 }

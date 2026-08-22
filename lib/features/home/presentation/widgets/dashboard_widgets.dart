@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/layout/adaptive_layout.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/liquid_glass.dart';
+import '../../../../core/widgets/content_surface.dart';
 import '../../domain/home_models.dart';
 
 class AmbientBackdrop extends StatelessWidget {
@@ -155,12 +155,10 @@ class ServiceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Column(
           children: [
-            LiquidGlass(
+            ContentSurface(
               radius: 20,
-              blur: 18,
-              opacity: service.isMore ? 0.92 : 0.68,
-              dark: service.isMore,
-              shadowOpacity: service.isMore ? 0.10 : 0.09,
+              inverse: service.isMore,
+              shadowOpacity: service.isMore ? 0.10 : 0.045,
               child: SizedBox(
                 width: 58,
                 height: 58,
@@ -418,11 +416,9 @@ class ActiveOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LiquidGlass(
+    return ContentSurface(
       radius: 25,
-      blur: 24,
-      opacity: 0.60,
-      shadowOpacity: 0.07,
+      shadowOpacity: 0.05,
       padding: const EdgeInsets.all(17),
       child: Column(
         children: [

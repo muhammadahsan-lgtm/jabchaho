@@ -18,6 +18,8 @@ class AiRequestCard extends StatelessWidget {
       blur: 28,
       opacity: 0.90,
       shadowOpacity: 0.20,
+      variant: GlassVariant.prominent,
+      interactive: true,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

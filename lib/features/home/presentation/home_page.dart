@@ -110,6 +110,35 @@ class _HomePageState extends State<HomePage> {
         ),
         if (!metrics.isExpanded)
           Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top + 92,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 180),
+                opacity: _showCollapsedHeader ? 1 : 0,
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.white,
+                        Color(0xD9FFFFFF),
+                        Color(0x00FFFFFF),
+                      ],
+                      stops: [0, 0.58, 1],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (!metrics.isExpanded)
+          Positioned(
             top: MediaQuery.paddingOf(context).top + 8,
             left: metrics.gutter,
             right: metrics.gutter,
@@ -384,6 +413,7 @@ class _SheetSurface extends StatelessWidget {
     blur: 30,
     radius: 30,
     shadowOpacity: 0.18,
+    variant: GlassVariant.prominent,
     padding: EdgeInsets.fromLTRB(
       20,
       12,

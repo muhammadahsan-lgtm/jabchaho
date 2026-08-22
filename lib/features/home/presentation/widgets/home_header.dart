@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/layout/adaptive_layout.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/content_surface.dart';
 import '../../../../core/widgets/liquid_glass.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -134,11 +135,9 @@ class SyncPill extends StatelessWidget {
   const SyncPill({super.key});
 
   @override
-  Widget build(BuildContext context) => LiquidGlass(
+  Widget build(BuildContext context) => ContentSurface(
     radius: 13,
-    blur: 16,
-    opacity: 0.48,
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.025,
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
     child: const Row(
       mainAxisSize: MainAxisSize.min,

@@ -1,10 +1,13 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-class LiquidGlass extends StatelessWidget {
+enum GlassVariant { clear, regular, prominent }
+
+class LiquidGlass extends StatefulWidget {
   const LiquidGlass({
     super.key,
     required this.child,
@@ -14,6 +17,9 @@ class LiquidGlass extends StatelessWidget {
     this.opacity = 0.58,
     this.dark = false,
     this.shadowOpacity = 0.10,
+    this.variant = GlassVariant.regular,
+    this.tint,
+    this.interactive = false,
   });
 
   final Widget child;
@@ -23,73 +29,249 @@ class LiquidGlass extends StatelessWidget {
   final double opacity;
   final bool dark;
   final double shadowOpacity;
+  final GlassVariant variant;
+  final Color? tint;
+  final bool interactive;
+
+  @override
+  State<LiquidGlass> createState() => _LiquidGlassState();
+}
+
+class _LiquidGlassState extends State<LiquidGlass> {
+  bool _hovered = false;
+  bool _focused = false;
+  bool _pressed = false;
+  Alignment _lightSource = const Alignment(-0.55, -0.75);
+
+  double get _energy {
+    if (_pressed) return 1;
+    if (_hovered || _focused) return 0.68;
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final tint = dark ? AppColors.black : AppColors.white;
-    final edge = dark
-        ? AppColors.white.withValues(alpha: 0.18)
-        : AppColors.white.withValues(alpha: 0.92);
+    final highContrast = MediaQuery.highContrastOf(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final duration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 190);
+    final tint =
+        widget.tint ?? (widget.dark ? AppColors.black : AppColors.white);
+    final variantOpacity = switch (widget.variant) {
+      GlassVariant.clear => widget.opacity * 0.74,
+      GlassVariant.regular => widget.opacity,
+      GlassVariant.prominent => math.max(widget.opacity, 0.76),
+    };
+    final effectiveOpacity = highContrast
+        ? math.max(variantOpacity, widget.dark ? 0.88 : 0.82)
+        : variantOpacity;
+    final effectiveBlur = highContrast ? widget.blur * 0.72 : widget.blur;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withValues(alpha: shadowOpacity),
-            blurRadius: 30,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+    Widget glass = TweenAnimationBuilder<double>(
+      tween: Tween(end: _energy),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, energy, child) {
+        final pressScale = reduceMotion
+            ? 1.0
+            : _pressed
+            ? 0.985
+            : _hovered
+            ? 1.004
+            : 1.0;
+        return AnimatedScale(
+          scale: pressScale,
+          duration: duration,
+          curve: Curves.easeOutCubic,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  tint.withValues(alpha: opacity + 0.08),
-                  tint.withValues(alpha: opacity),
-                  tint.withValues(alpha: (opacity - 0.08).clamp(0, 1)),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: edge),
-            ),
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                Padding(padding: padding ?? EdgeInsets.zero, child: child),
-                Positioned(
-                  top: 1,
-                  left: radius * 0.7,
-                  right: radius * 1.2,
-                  child: IgnorePointer(
-                    child: Container(
-                      height: 1,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            AppColors.white.withValues(alpha: 0.85),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
+              borderRadius: BorderRadius.circular(widget.radius),
+              boxShadow: [
+                BoxShadow(
+                  color: tint.withValues(alpha: (0.08 * energy).clamp(0, 1)),
+                  blurRadius: 18 + (12 * energy),
+                  spreadRadius: energy * 1.5,
+                ),
+                BoxShadow(
+                  color: AppColors.black.withValues(
+                    alpha: widget.shadowOpacity * (1 - energy * 0.18),
                   ),
+                  blurRadius:
+                      28 + (widget.variant == GlassVariant.prominent ? 8 : 0),
+                  offset: Offset(0, 12 - energy * 3),
                 ),
               ],
             ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(widget.radius),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: effectiveBlur,
+                  sigmaY: effectiveBlur,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        tint.withValues(
+                          alpha: (effectiveOpacity + 0.07).clamp(0, 1),
+                        ),
+                        tint.withValues(alpha: effectiveOpacity.clamp(0, 1)),
+                        tint.withValues(
+                          alpha: (effectiveOpacity - 0.10).clamp(0, 1),
+                        ),
+                      ],
+                      stops: const [0, 0.52, 1],
+                    ),
+                    borderRadius: BorderRadius.circular(widget.radius),
+                  ),
+                  child: CustomPaint(
+                    foregroundPainter: _GlassOpticsPainter(
+                      radius: widget.radius,
+                      dark: widget.dark,
+                      highContrast: highContrast,
+                      energy: energy,
+                      lightSource: _lightSource,
+                    ),
+                    child: Padding(
+                      padding: widget.padding ?? EdgeInsets.zero,
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
+        );
+      },
+      child: widget.child,
+    );
+
+    if (!widget.interactive) return glass;
+
+    glass = FocusableActionDetector(
+      onShowFocusHighlight: (value) => setState(() => _focused = value),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+          _lightSource = const Alignment(-0.55, -0.75);
+        }),
+        onHover: (event) => _updateLight(event.localPosition, context),
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) {
+            setState(() => _pressed = true);
+            _updateLight(event.localPosition, context);
+          },
+          onPointerMove: (event) => _updateLight(event.localPosition, context),
+          onPointerUp: (_) => setState(() => _pressed = false),
+          onPointerCancel: (_) => setState(() => _pressed = false),
+          child: glass,
         ),
       ),
     );
+    return glass;
   }
+
+  void _updateLight(Offset localPosition, BuildContext context) {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize || box.size.isEmpty) return;
+    final x = ((localPosition.dx / box.size.width) * 2 - 1).clamp(-1.0, 1.0);
+    final y = ((localPosition.dy / box.size.height) * 2 - 1).clamp(-1.0, 1.0);
+    final next = Alignment(x, y);
+    if ((next.x - _lightSource.x).abs() < 0.03 &&
+        (next.y - _lightSource.y).abs() < 0.03) {
+      return;
+    }
+    setState(() => _lightSource = next);
+  }
+}
+
+class _GlassOpticsPainter extends CustomPainter {
+  const _GlassOpticsPainter({
+    required this.radius,
+    required this.dark,
+    required this.highContrast,
+    required this.energy,
+    required this.lightSource,
+  });
+
+  final double radius;
+  final bool dark;
+  final bool highContrast;
+  final double energy;
+  final Alignment lightSource;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.6),
+      Radius.circular(radius),
+    );
+
+    canvas.save();
+    canvas.clipRRect(rrect);
+    final glow = Paint()
+      ..shader = RadialGradient(
+        center: lightSource,
+        radius: 0.76,
+        colors: [
+          AppColors.white.withValues(alpha: 0.08 + energy * 0.20),
+          AppColors.white.withValues(alpha: energy * 0.035),
+          Colors.transparent,
+        ],
+        stops: const [0, 0.52, 1],
+      ).createShader(rect);
+    canvas.drawRect(rect, glow);
+
+    final depth = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          AppColors.black.withValues(alpha: dark ? 0.10 : 0.035),
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, depth);
+    canvas.restore();
+
+    final rim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = highContrast ? 1.5 : 1.0
+      ..shader = SweepGradient(
+        startAngle: -math.pi,
+        endAngle: math.pi,
+        colors: [
+          AppColors.white.withValues(alpha: dark ? 0.26 : 0.95),
+          AppColors.white.withValues(alpha: 0.38 + energy * 0.30),
+          AppColors.black.withValues(alpha: dark ? 0.24 : 0.07),
+          AppColors.white.withValues(alpha: dark ? 0.22 : 0.84),
+        ],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, rim);
+
+    final lensRim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..color = AppColors.white.withValues(alpha: 0.12 + energy * 0.12);
+    canvas.drawRRect(rrect.deflate(2.0), lensRim);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassOpticsPainter oldDelegate) =>
+      oldDelegate.energy != energy ||
+      oldDelegate.lightSource != lightSource ||
+      oldDelegate.highContrast != highContrast ||
+      oldDelegate.dark != dark ||
+      oldDelegate.radius != radius;
 }
 
 class GlassIconButton extends StatelessWidget {
@@ -114,8 +296,9 @@ class GlassIconButton extends StatelessWidget {
         LiquidGlass(
           radius: 16,
           blur: 18,
-          opacity: 0.45,
+          opacity: 0.42,
           shadowOpacity: 0.06,
+          interactive: true,
           child: IconButton(
             onPressed: onPressed,
             tooltip: tooltip,
